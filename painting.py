@@ -3,6 +3,7 @@ import numpy as np
 import handTracking as htm
 import handClassification as hcf
 import ironMan as im
+import time
 
 # 설정
 eraserThickness = 25
@@ -10,6 +11,10 @@ brushThickness = 25
 eraserThickness = 100
 canvasWidth = 1280
 canvasHeight = 720
+save_timer = None
+save_start_time = None
+save_countdown_position = (1100, 700)
+last_drawing_save_time = 0
 
 drawColor = (255, 255, 255)
 xp, yp = 0, 0
@@ -90,30 +95,25 @@ while True:
             palette_mode = True
             print("🎨 색상 선택 모드 진입")
         elif gesture == "save_full":
-            print("전체 저장 (배경 포함) - 1초 후 저장")
-            #구현
+            if save_timer is None:
+                save_start_time = time.time()
+                save_timer = True
+                print("🖼️ 전체 저장 예약됨 (3초 후)")
         elif gesture == "save_drawing":
-            print("드로잉만 저장")
-            #구현
+            now = time.time()
+            if now - last_drawing_save_time >= 5:
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                random_id = np.random.randint(1000, 9999)
+                save_path = f"drawing_only_{timestamp}_{random_id}.png"
+                cv.imwrite(save_path, imgCanvas)
+                print(f"🖌️ 드로잉만 저장 완료: {save_path}")
+                last_drawing_save_time = now
+            else:
+                remaining = 5 - (now - last_drawing_save_time)
+                print(f"⏳ 저장 쿨타임: {remaining:.1f}초 남음")
         elif gesture == "easter_egg":
             print("🪄 아이언맨 모드 발동")
             #구현
-
-    if palette_mode and lmList_right:
-        x1, y1 = lmList_right[8][1], lmList_right[8][2]
-
-        for color_val, (x1_box, y1_box, x2_box, y2_box) in colors:
-            cv.rectangle(img, (x1_box, y1_box), (x2_box, y2_box), color_val, cv.FILLED)
-            if x1_box < x1 < x2_box and y1_box < y1 < y2_box:
-                drawColor = color_val
-                print("🎨 색상 변경:", color_val)
-
-        x1_q, y1_q, x2_q, y2_q = quit_button_area
-        cv.rectangle(img, (x1_q, y1_q), (x2_q, y2_q), (200, 0, 0), cv.FILLED)
-        cv.putText(img, "QUIT", (x1_q + 10, y2_q - 15), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        if x1_q < x1 < x2_q and y1_q < y1 < y2_q:
-            palette_mode = False
-            print("❎ 색상 선택 모드 종료")
 
     if mode in ["draw", "erase"] and not palette_mode and lmList_right:
         lmDict = {id: (x, y) for id, x, y in lmList_right}
@@ -168,7 +168,38 @@ while True:
 
     # 둘을 합성
     imgResult = cv.add(img_bg, img_fg)
+    
+    if save_timer:
+        elapsed = time.time() - save_start_time
+        if elapsed < 3:
+            remaining = max(0, 3 - elapsed)
+            cv.putText(imgResult, f"{remaining:.1f}", save_countdown_position,
+                    cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+        else:
+            # 3초 지난 후 저장
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            random_id = np.random.randint(1000, 9999)
+            save_path = f"canvas_full_{timestamp}_{random_id}.png"
+            cv.imwrite(save_path, imgResult)
+            print(f"💾 전체 캔버스 저장 완료: {save_path}")
+            save_timer = None
 
+    if palette_mode and lmList_right:
+        x1, y1 = lmList_right[8][1], lmList_right[8][2]
+
+        for color_val, (x1_box, y1_box, x2_box, y2_box) in colors:
+            cv.rectangle(imgResult, (x1_box, y1_box), (x2_box, y2_box), color_val, cv.FILLED)
+            if x1_box < x1 < x2_box and y1_box < y1 < y2_box:
+                drawColor = color_val
+                print("🎨 색상 변경:", color_val)
+
+        x1_q, y1_q, x2_q, y2_q = quit_button_area
+        cv.rectangle(imgResult, (x1_q, y1_q), (x2_q, y2_q), (200, 0, 0), cv.FILLED)
+        cv.putText(imgResult, "QUIT", (x1_q + 10, y2_q - 15), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        if x1_q < x1 < x2_q and y1_q < y1 < y2_q:
+            palette_mode = False
+            print("❎ 색상 선택 모드 종료")
+            
     cv.imshow("Canvas", imgCanvas)
     cv.imshow("Image", imgResult)
 

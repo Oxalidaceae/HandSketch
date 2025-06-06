@@ -5,32 +5,37 @@ import handClassification as hcf
 import ironMan as im
 import time
 
-# 설정
+# Brush & canvas settings
 eraserThickness = 25
 brushThickness = 25
-eraserThickness = 100
 canvasWidth = 1280
 canvasHeight = 720
+
+# Save timers and drawing state
 save_timer = None
 save_start_time = None
 save_countdown_position = (1100, 700)
 last_drawing_save_time = 0
 
+# Drawing mode & state
 drawColor = (255, 255, 255)
 xp, yp = 0, 0
 mode = "draw"
 palette_mode = False
 
+# Blank canvas for drawing
 imgCanvas = np.zeros((canvasHeight, canvasWidth, 3), np.uint8)
 
+# Camera setup
 cap = cv.VideoCapture(0)
 cap.set(3, canvasWidth)
 cap.set(4, canvasHeight)
 
+# Hand tracker and Iron Man effect
 detector = htm.handDetector(detectionCon=0.65, maxHands=2)
+iron_effect = im.IronManEffect(canvas_width=canvasWidth, canvas_height=canvasHeight)
 
-frame_count = 0
-
+# Color palette rectangles: ((BGR color), (x1, y1, x2, y2))
 colors = [
     ((0, 0, 255), (20, 20, 100, 100)),
     ((0, 165, 255), (120, 20, 200, 100)),
@@ -48,17 +53,19 @@ quit_button_area = (20, 120, 120, 170)
 while True:
     success, img = cap.read()
     if not success:
-        print("⚠️ 프레임을 읽지 못했습니다.")
+        print("⚠️ Can't read frame.")
         continue
 
     img = cv.flip(img, 1)
     img = detector.findHands(img)
     lmLists, _, handedness_list = detector.findPositions(img, draw=False)
 
+    # Finger status and landmarks
     fingers_right, fingers_left = [0]*5, [0]*5
     lmList_right, lmList_left = [], []
     lmDict = {}
 
+    # Separate left and right hands
     for lmList, handLabel in zip(lmLists, handedness_list):
         if handLabel == "Right":
             fingers_right = detector.fingersUp(lmList)
@@ -70,35 +77,43 @@ while True:
     left_present = len(lmList_left) > 0
     gesture = hcf.classifyGesture(fingers_right, fingers_left, left_present=left_present)
 
+    # Check Iron Man beam trigger every frame
+    img, imgCanvas, _ = iron_effect.update(
+        fingers_right, fingers_left,
+        lmList_right, lmList_left,
+        img, imgCanvas
+    )
+
+    # Handle drawing modes
     if not palette_mode:
         if gesture == 'erase_candidate' and lmList_right:
             length, _, _ = detector.findDistance(8, 12, img, lmList_right, draw=False)
             if length < 100:
                 mode = "erase"
-                print("🧽 지우개 모드")
+                print("🧽 Erase Mode")
             else:
                 mode = "draw"
-                print("✏️ 드로잉 모드")
+                print("✏️ Drawing Mode")
         elif gesture == "draw":
             mode = "draw"
-            print("✏️ 드로잉 모드")
+            print("✏️ Drawing Mode")
         elif gesture == "thin":
             brushThickness = eraserThickness = 10
-            print("얇은 브러시")
+            print("Thin Brush")
         elif gesture == "medium":
             brushThickness = eraserThickness = 25
-            print("중간 브러시")
+            print("Medium Brush")
         elif gesture == "thick":
             brushThickness = eraserThickness = 45
-            print("두꺼운 브러시")
+            print("Thick Brush")
         elif gesture == "palette":
             palette_mode = True
-            print("🎨 색상 선택 모드 진입")
+            print("🎨 Color Select Mode")
         elif gesture == "save_full":
             if save_timer is None:
                 save_start_time = time.time()
                 save_timer = True
-                print("🖼️ 전체 저장 예약됨 (3초 후)")
+                print("🖼️ Save full canvas (3s later)")
         elif gesture == "save_drawing":
             now = time.time()
             if now - last_drawing_save_time >= 5:
@@ -106,15 +121,13 @@ while True:
                 random_id = np.random.randint(1000, 9999)
                 save_path = f"drawing_only_{timestamp}_{random_id}.png"
                 cv.imwrite(save_path, imgCanvas)
-                print(f"🖌️ 드로잉만 저장 완료: {save_path}")
+                print(f"🖌️ Save only drawing: {save_path}")
                 last_drawing_save_time = now
             else:
                 remaining = 5 - (now - last_drawing_save_time)
-                print(f"⏳ 저장 쿨타임: {remaining:.1f}초 남음")
-        elif gesture == "easter_egg":
-            print("🪄 아이언맨 모드 발동")
-            #구현
+                print(f"⏳ Saving cooltime: {remaining:.1f}seconds left")
 
+    # Handle drawing and erasing
     if mode in ["draw", "erase"] and not palette_mode and lmList_right:
         lmDict = {id: (x, y) for id, x, y in lmList_right}
         if 8 in lmDict and 12 in lmDict:
@@ -128,6 +141,7 @@ while True:
                 if xp == 0 and yp == 0:
                     xp, yp = x1, y1
 
+                # Draw lines on both the original and canvas
                 cv.line(img, (xp, yp), (x1, y1), color, thickness)
                 cv.line(imgCanvas, (xp, yp), (x1, y1), color, thickness)
 
@@ -145,14 +159,7 @@ while True:
             thickness = eraserThickness if mode == "erase" else brushThickness
             cv.circle(img, (x1, y1), thickness // 2, (0, 0, 0), cv.FILLED)
 
-    cv.putText(img, f"Right: {fingers_right}", (10, 50), cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv.putText(img, f"Left:  {fingers_left}", (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-
-    frame_count += 1
-    if frame_count % 10 == 0:
-        print(f"[frame {frame_count}] 오른손: {fingers_right}, 왼손: {fingers_left}, 제스처: {gesture}")
-
-    # 마스크 기반으로 완전한 덮어쓰기
+    # Combine canvas with webcam frame
     imgGray = cv.cvtColor(imgCanvas, cv.COLOR_BGR2GRAY)
     _, mask = cv.threshold(imgGray, 10, 255, cv.THRESH_BINARY)
     mask_inv = cv.bitwise_not(mask)
@@ -160,15 +167,11 @@ while True:
     mask_colored = cv.cvtColor(mask, cv.COLOR_GRAY2BGR)
     mask_inv_colored = cv.cvtColor(mask_inv, cv.COLOR_GRAY2BGR)
 
-    # 원본 이미지에서 드로잉 부분 제거
     img_bg = cv.bitwise_and(img, mask_inv_colored)
-
-    # 캔버스에서 드로잉 부분만 추출
     img_fg = cv.bitwise_and(imgCanvas, mask_colored)
-
-    # 둘을 합성
     imgResult = cv.add(img_bg, img_fg)
-    
+
+    # Handle countdown for full canvas save
     if save_timer:
         elapsed = time.time() - save_start_time
         if elapsed < 3:
@@ -176,14 +179,14 @@ while True:
             cv.putText(imgResult, f"{remaining:.1f}", save_countdown_position,
                     cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
         else:
-            # 3초 지난 후 저장
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             random_id = np.random.randint(1000, 9999)
             save_path = f"canvas_full_{timestamp}_{random_id}.png"
             cv.imwrite(save_path, imgResult)
-            print(f"💾 전체 캔버스 저장 완료: {save_path}")
+            print(f"💾 Full canvas saved: {save_path}")
             save_timer = None
 
+    # Handle color selection UI
     if palette_mode and lmList_right:
         x1, y1 = lmList_right[8][1], lmList_right[8][2]
 
@@ -191,15 +194,17 @@ while True:
             cv.rectangle(imgResult, (x1_box, y1_box), (x2_box, y2_box), color_val, cv.FILLED)
             if x1_box < x1 < x2_box and y1_box < y1 < y2_box:
                 drawColor = color_val
-                print("🎨 색상 변경:", color_val)
+                print("🎨 Color changed:", color_val)
 
+        # Quit color selection mode
         x1_q, y1_q, x2_q, y2_q = quit_button_area
         cv.rectangle(imgResult, (x1_q, y1_q), (x2_q, y2_q), (200, 0, 0), cv.FILLED)
         cv.putText(imgResult, "QUIT", (x1_q + 10, y2_q - 15), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         if x1_q < x1 < x2_q and y1_q < y1 < y2_q:
             palette_mode = False
-            print("❎ 색상 선택 모드 종료")
-            
+            print("❎ Exit color select mode")
+
+    # Show result
     cv.imshow("Canvas", imgCanvas)
     cv.imshow("Image", imgResult)
 

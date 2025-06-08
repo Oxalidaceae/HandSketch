@@ -6,7 +6,7 @@ HandSketch is a real-time, webcam-based virtual drawing tool that uses hand gest
 
 ## Requirements
 - python 3.10 or below (my environment is python 3.10.11)
-- mediapipe is not working at recent version of python.
+- Note: `mediapipe` may not work with Python versions above 3.10.
 - libraries: time, numpy, cv2, mediapipe, math
 
 
@@ -40,18 +40,25 @@ HandSketch is a real-time, webcam-based virtual drawing tool that uses hand gest
 | 4   | **Right hand**   | Index + middle + ring + pinky fingers                          | Medium brush or eraser                   |
 | 5   | **Right hand**   | All 5 fingers open                                             | Thick brush or eraser                    |
 |     |                  |                                                                |                                           |
-|     | **Both hands**   | Both fists (0 fingers)                                         | 🎨 Enter color palette (select with index finger) |
-| 6   | **Both hands**   | Right: 5 fingers + Left: thumb only                            | 💾 Save full canvas (after 1 second)     |
+| 0   | **Both hands**   | Both fists (0 fingers)                                         | 🎨 Enter color palette (select with index finger) |
+| 6   | **Both hands**   | Right: 5 fingers + Left: thumb only                            | 💾 Save full canvas (after 3 second)     |
 |     |                  |                                                                | (countdown shown on screen but not saved)|
-| 7   | **Both hands**   | Right: 5 fingers + Left: thumb + index                         | 💾 Save **drawing only** (on white background) |
+| 7   | **Both hands**   | Right: 5 fingers + Left: thumb + index                         | 💾 Save **drawing only** (on black background) |
 | 10  | **Both hands**   | All 10 fingers open                                            | 💥 Iron Man beam effect + canvas clear   |
 
+
+## Preview Image of saved 
+[Save full canvas with 6 fingers](./canvas_full_20250608_150505_3082.pngcanvas_full)
+Full canvas saving by 6 fingers(3 seconds waiting time)
+
+[Save drawing only with 7 fingers](./drawing_only_20250608_150507_4070.png)
+Only drawing with black background
 
 ## 🖥️ How to Use
 
 1. Download the whole files of this repository.
 
-2. Run the code: run the painting.py
+2. Run the app by executing `painting.py`
 
 3. Enjoy the application with the guide above.
 
@@ -60,8 +67,7 @@ HandSketch is a real-time, webcam-based virtual drawing tool that uses hand gest
 
 ## Demo Video
 
-Watch the full demo here:
-[Watch the demo on YouTube](https://youtube.com/your-demo-link)
+▶️ [Watch the demo on YouTube](https://youtu.be/h_TFbRmyO_Y)
 
 
 ## 📄 Acknowledgements

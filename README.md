@@ -70,7 +70,7 @@ Only drawing with black background
 ▶️ [Watch the demo on YouTube](https://youtu.be/h_TFbRmyO_Y)
 
 
-## 📄 Acknowledgements
+## 📄 Reference
 
 [computervision.zone](https://www.computervision.zone/courses/ai-virtual-painter/)
 

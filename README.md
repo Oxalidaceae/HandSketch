@@ -48,10 +48,10 @@ HandSketch is a real-time, webcam-based virtual drawing tool that uses hand gest
 
 
 ## Preview Image of saved 
-[Save full canvas with 6 fingers](./canvas_full_20250608_150505_3082.pngcanvas_full)
+![Save full canvas with 6 fingers](./canvas_full_20250608_150505_3082.pngcanvas_full)
 Full canvas saving by 6 fingers(3 seconds waiting time)
 
-[Save drawing only with 7 fingers](./drawing_only_20250608_150507_4070.png)
+![Save drawing only with 7 fingers](./drawing_only_20250608_150507_4070.png)
 Only drawing with black background
 
 ## 🖥️ How to Use
